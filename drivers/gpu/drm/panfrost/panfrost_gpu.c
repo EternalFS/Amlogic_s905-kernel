@@ -7,12 +7,12 @@
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/interrupt.h>
+#include <linux/reset.h>
 #include <linux/io.h>
-#include <linux/iopoll.h>
 #include <linux/of.h>
+#include <linux/iopoll.h>
 #include <linux/platform_device.h>
 #include <linux/pm_runtime.h>
-#include <linux/reset.h>
 
 #include "panfrost_device.h"
 #include "panfrost_features.h"
@@ -63,7 +63,8 @@ int panfrost_gpu_soft_reset(struct panfrost_device *pfdev)
 	gpu_write(pfdev, GPU_INT_MASK, 0);
 	gpu_write(pfdev, GPU_INT_CLEAR, GPU_IRQ_RESET_COMPLETED);
 
-	if (of_device_is_compatible(pfdev->dev->of_node, "amlogic,meson-g12a-mali")) {
+	if (of_device_is_compatible(pfdev->dev->of_node, "amlogic,meson-gxm-mali") ||
+	    of_device_is_compatible(pfdev->dev->of_node, "amlogic,meson-g12a-mali")) {
 		reset_control_assert(pfdev->rstc);
 		udelay(10);
 		reset_control_deassert(pfdev->rstc);
