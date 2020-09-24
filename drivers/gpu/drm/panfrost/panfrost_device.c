@@ -90,11 +90,9 @@ static int panfrost_regulator_init(struct panfrost_device *pfdev)
 {
 	int ret, i;
 
-	pfdev->regulators = devm_kcalloc(pfdev->dev, pfdev->comp->num_supplies,
-					 sizeof(*pfdev->regulators),
-					 GFP_KERNEL);
-	if (!pfdev->regulators)
-		return -ENOMEM;
+	if (WARN(pfdev->comp->num_supplies > ARRAY_SIZE(pfdev->regulators),
+			"Too many supplies in compatible structure.\n"))
+		return -EINVAL;
 
 	for (i = 0; i < pfdev->comp->num_supplies; i++)
 		pfdev->regulators[i].supply = pfdev->comp->supply_names[i];
@@ -121,10 +119,8 @@ static int panfrost_regulator_init(struct panfrost_device *pfdev)
 
 static void panfrost_regulator_fini(struct panfrost_device *pfdev)
 {
-	if (!pfdev->regulators)
-		return;
-
-	regulator_bulk_disable(pfdev->comp->num_supplies, pfdev->regulators);
+	regulator_bulk_disable(pfdev->comp->num_supplies,
+			pfdev->regulators);
 }
 
 static void panfrost_pm_domain_fini(struct panfrost_device *pfdev)
@@ -218,70 +214,58 @@ int panfrost_device_init(struct panfrost_device *pfdev)
 		return err;
 	}
 
-	err = panfrost_devfreq_init(pfdev);
-	if (err) {
-		if (err != -EPROBE_DEFER)
-			dev_err(pfdev->dev, "devfreq init failed %d\n", err);
-		goto out_clk;
-	}
-
-	/* OPP will handle regulators */
-	if (!pfdev->pfdevfreq.opp_of_table_added) {
-		err = panfrost_regulator_init(pfdev);
-		if (err)
-			goto out_devfreq;
-	}
+	err = panfrost_regulator_init(pfdev);
+	if (err)
+		goto err_out0;
 
 	err = panfrost_reset_init(pfdev);
 	if (err) {
 		dev_err(pfdev->dev, "reset init failed %d\n", err);
-		goto out_regulator;
+		goto err_out1;
 	}
 
 	err = panfrost_pm_domain_init(pfdev);
 	if (err)
-		goto out_reset;
+		goto err_out2;
 
 	res = platform_get_resource(pfdev->pdev, IORESOURCE_MEM, 0);
 	pfdev->iomem = devm_ioremap_resource(pfdev->dev, res);
 	if (IS_ERR(pfdev->iomem)) {
 		dev_err(pfdev->dev, "failed to ioremap iomem\n");
 		err = PTR_ERR(pfdev->iomem);
-		goto out_pm_domain;
+		goto err_out3;
 	}
 
 	err = panfrost_gpu_init(pfdev);
 	if (err)
-		goto out_pm_domain;
+		goto err_out3;
 
 	err = panfrost_mmu_init(pfdev);
 	if (err)
-		goto out_gpu;
+		goto err_out4;
 
 	err = panfrost_job_init(pfdev);
 	if (err)
-		goto out_mmu;
+		goto err_out5;
 
 	err = panfrost_perfcnt_init(pfdev);
 	if (err)
-		goto out_job;
+		goto err_out6;
 
 	return 0;
-out_job:
+err_out6:
 	panfrost_job_fini(pfdev);
-out_mmu:
+err_out5:
 	panfrost_mmu_fini(pfdev);
-out_gpu:
+err_out4:
 	panfrost_gpu_fini(pfdev);
-out_pm_domain:
+err_out3:
 	panfrost_pm_domain_fini(pfdev);
-out_reset:
+err_out2:
 	panfrost_reset_fini(pfdev);
-out_regulator:
+err_out1:
 	panfrost_regulator_fini(pfdev);
-out_devfreq:
-	panfrost_devfreq_fini(pfdev);
-out_clk:
+err_out0:
 	panfrost_clk_fini(pfdev);
 	return err;
 }
@@ -294,7 +278,6 @@ void panfrost_device_fini(struct panfrost_device *pfdev)
 	panfrost_gpu_fini(pfdev);
 	panfrost_pm_domain_fini(pfdev);
 	panfrost_reset_fini(pfdev);
-	panfrost_devfreq_fini(pfdev);
 	panfrost_regulator_fini(pfdev);
 	panfrost_clk_fini(pfdev);
 }

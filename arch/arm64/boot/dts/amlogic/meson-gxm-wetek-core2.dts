@@ -14,21 +14,21 @@
 	compatible = "wetek,core2", "amlogic,s912", "amlogic,meson-gxm";
 	model = "WeTek Core 2";
 
-        memory@0 {
-                device_type = "memory";
-                reg = <0x0 0x0 0x0 0x80000000>; /* 2 GiB or 3 GiB */
-        };
+	memory@0 {
+		device_type = "memory";
+		reg = <0x0 0x0 0x0 0x80000000>; /* 2 GiB or 3 GiB */
+	};
 
-        leds {
-                compatible = "gpio-leds";
+	leds {
+		compatible = "gpio-leds";
 
-                blue {
-                        color = <LED_COLOR_ID_BLUE>;
-                        function = LED_FUNCTION_STATUS;
-                        gpios = <&gpio GPIODV_24 GPIO_ACTIVE_HIGH>;
-                        default-state = "on";
-                };
-        };
+		blue {
+			color = <LED_COLOR_ID_BLUE>;
+			function = LED_FUNCTION_STATUS;
+			gpios = <&gpio GPIODV_24 GPIO_ACTIVE_HIGH>;
+			default-state = "on";
+		};
+	};
 
 	adc-keys {
 		compatible = "adc-keys";
@@ -53,20 +53,17 @@
 			label = "power";
 			linux,code = <KEY_POWER>;
 			gpios = <&gpio_ao GPIOAO_2 GPIO_ACTIVE_LOW>;
-                };
-        };
+		};
+	};
 };
 
-/* This is disabled as Realtek RTL8152 USB provides Ethernet */
+/* Disabled as Realtek RTL8152 USB provides Ethernet */
 &ethmac {
 	status = "disabled";
-	phy-mode = "rmii";
-	phy-handle = <&internal_phy>;
 };
 
 &internal_phy {
-	pinctrl-0 = <&eth_link_led_pins>, <&eth_act_led_pins>;
-	pinctrl-names = "default";
+	status = "disabled";
 };
 
 &ir {
@@ -75,16 +72,16 @@
 
 /* This is connected to the Bluetooth module: */
 &uart_A {
-        status = "okay";
-        pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
-        pinctrl-names = "default";
-        uart-has-rtscts;
+	status = "okay";
+	pinctrl-0 = <&uart_a_pins>, <&uart_a_cts_rts_pins>;
+	pinctrl-names = "default";
+	uart-has-rtscts;
 
-        bluetooth {
-                compatible = "brcm,bcm43438-bt";
-                enable-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
-                max-speed = <2000000>;
-                clocks = <&wifi32k>;
-                clock-names = "lpo";
-        };
+	bluetooth {
+		compatible = "brcm,bcm43438-bt";
+		shutdown-gpios = <&gpio GPIOX_17 GPIO_ACTIVE_HIGH>;
+		max-speed = <2000000>;
+		clocks = <&wifi32k>;
+		clock-names = "lpo";
+	};
 };
